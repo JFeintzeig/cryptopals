@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math"
-	//"strings"
 )
 
 var CharFreq map[rune]float64
@@ -190,7 +189,7 @@ func ScoreString(input string) float64 {
 		if _, ok := CharFreq[r]; ok {
 			score += hist[r] * math.Log(hist[r]/CharFreq[r])
 		} else {
-			score += hist[r] * math.Log(hist[r]/0.0001)
+			score += hist[r] * math.Log(hist[r]/1e-6)
 		}
 	}
 
