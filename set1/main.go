@@ -12,9 +12,9 @@ var CharFreq map[rune]float64
 
 func init() {
 
-  // ascii table character frequencies, including
-  // punctuation, spaces, etc., not just a-z
-  // https://opendata.stackexchange.com/a/19792
+	// ascii table character frequencies, including
+	// punctuation, spaces, etc., not just a-z
+	// https://opendata.stackexchange.com/a/19792
 	CharFreq = map[rune]float64{
 		32:  0.167564443682168,
 		101: 0.08610229517681191,
@@ -217,7 +217,7 @@ func Challenge3() {
 			decrypted = outputString
 		}
 	}
-  fmt.Printf("Challenge 3: key: %02X decrypted message: %s\n", minKey, decrypted)
+	fmt.Printf("Challenge 3: key: %02X decrypted message: %s\n", minKey, decrypted)
 }
 
 func main() {
