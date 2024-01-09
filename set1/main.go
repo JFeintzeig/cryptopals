@@ -129,7 +129,7 @@ func Challenge1() {
 
 	fmt.Printf("Challenge 1: %s\n", b64)
 	if b64 != "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t" {
-		panic("problem encoding base64")
+		panic("problem with challenge 1")
 	}
 }
 
@@ -161,7 +161,7 @@ func Challenge2() {
 	xor := FixedXOR(s1, s2)
 	fmt.Printf("Challenge 2: %s\n", xor)
 	if xor != "746865206b696420646f6e277420706c6179" {
-		panic("problem with fixed xor")
+		panic("problem with challenge 2")
 	}
 
 }
@@ -223,6 +223,9 @@ func Challenge3() {
 
   decrypted, minKey, minScore := DecryptSingleByteXOR(inputBytes)
   fmt.Printf("Challenge 3: key: %02X score: %3.3f decrypted message: %s\n", minKey, minScore, decrypted)
+  if decrypted != "Cooking MC's like a pound of bacon" {
+    panic("problem with challenge 3")
+  }
 }
 
 func Challenge4() {
@@ -250,6 +253,9 @@ func Challenge4() {
     }
   }
   fmt.Printf("Challenge 4: input:%s decrypted:%s key:%02X score:%3.3f\n", input, decrypted, key, minScore)
+  if input != "7b5a4215415d544115415d5015455447414c155c46155f4058455c5b523f" && key != 0x34 {
+    panic("problem w challenge 4")
+  }
 }
 
 func main() {
