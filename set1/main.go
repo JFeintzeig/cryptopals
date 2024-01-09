@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math"
+	"os"
+  "strings"
 )
 
 var CharFreq map[rune]float64
@@ -195,14 +197,26 @@ func ScoreString(input string) float64 {
 	return score
 }
 
-func Challenge3() {
-	input := "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
-	inputBytes, err := hex.DecodeString(input)
-	if err != nil {
-		panic("error decoding hex string")
-	}
+func SimpleScoreString(input string) float64 {
+  var score float64
+  for _, r := range input {
+    // a-zA-Z<space>
+    if (r >= 65 && r <= 90) || (r >= 97 && r <= 122) || (r == 32) {
+      score += 1
+    // 0-9!"'(),-.?\n\r
+    } else if (r >= 48 && r <= 57) || (r == 33) || (r == 34) || (r==39) || (r==40) || (r==41) || (r==44) || (r==45) || (r==46) || (r==63) || (r==10) || (r==13){
+      score += 10
+    } else if (r < 32) || (r > 126) {
+      score += 500
+    } else {
+      score += 50
+    }
+  }
+  return score
+}
 
-	var minScore float64 = 100
+func DecryptSingleByteXOR(inputBytes []byte) (string, uint8, float64) {
+	var minScore float64 = 1000000
 	var minKey uint8
 	var decrypted string
 	for key := uint8(0); key != 255; key++ {
@@ -215,11 +229,50 @@ func Challenge3() {
 			decrypted = outputString
 		}
 	}
-	fmt.Printf("Challenge 3: key: %02X decrypted message: %s\n", minKey, decrypted)
+  return decrypted, minKey, minScore
+}
+
+func Challenge3() {
+	input := "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
+	inputBytes, err := hex.DecodeString(input)
+	if err != nil {
+		panic("error decoding hex string")
+	}
+
+  decrypted, minKey, minScore := DecryptSingleByteXOR(inputBytes)
+  fmt.Printf("Challenge 3: key: %02X score: %3.3f decrypted message: %s\n", minKey, minScore, decrypted)
+}
+
+func Challenge4() {
+  file, err := os.ReadFile("test.txt")
+  if err != nil {
+    panic(err)
+  }
+  lines := strings.Split(strings.Trim(string(file),"\n"), "\n")
+
+  var key uint8
+  var minScore float64 = 10000
+  var decrypted string
+  var input string
+  for _, line := range lines {
+    inputBytes, err := hex.DecodeString(line)
+    if err != nil {
+      panic("error decoding hex string")
+    }
+    thisDecrypted, thisKey, thisScore := DecryptSingleByteXOR(inputBytes)
+    if thisScore < minScore {
+      key = thisKey
+      decrypted = thisDecrypted
+      minScore = thisScore
+      input = line
+    }
+  }
+  fmt.Printf("Challenge 4: input:%s decrypted:%s key:%02X score:%3.3f\n", input, decrypted, key, minScore)
 }
 
 func main() {
 	Challenge1()
 	Challenge2()
 	Challenge3()
+  Challenge4()
 }
