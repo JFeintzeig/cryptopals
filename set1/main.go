@@ -165,16 +165,15 @@ func Challenge2() {
 }
 
 func SingleByteXOR(byteArray []byte, key byte) []byte {
+  output := make([]byte, len(byteArray))
 	for i := range byteArray {
-		byteArray[i] ^= key
+		output[i] = byteArray[i] ^ key
 	}
-	return byteArray
+	return output
 }
 
 // K-L divergence
 func ScoreString(input string) float64 {
-	//input = strings.ToUpper(input)
-
 	hist := make(map[rune]float64)
 	for _, r := range input {
 		if _, ok := hist[r]; ok {
