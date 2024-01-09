@@ -197,24 +197,6 @@ func ScoreString(input string) float64 {
 	return score
 }
 
-func SimpleScoreString(input string) float64 {
-  var score float64
-  for _, r := range input {
-    // a-zA-Z<space>
-    if (r >= 65 && r <= 90) || (r >= 97 && r <= 122) || (r == 32) {
-      score += 1
-    // 0-9!"'(),-.?\n\r
-    } else if (r >= 48 && r <= 57) || (r == 33) || (r == 34) || (r==39) || (r==40) || (r==41) || (r==44) || (r==45) || (r==46) || (r==63) || (r==10) || (r==13){
-      score += 10
-    } else if (r < 32) || (r > 126) {
-      score += 500
-    } else {
-      score += 50
-    }
-  }
-  return score
-}
-
 func DecryptSingleByteXOR(inputBytes []byte) (string, uint8, float64) {
 	var minScore float64 = 1000000
 	var minKey uint8
