@@ -190,7 +190,7 @@ func ScoreString(input string) float64 {
 		if _, ok := CharFreq[r]; ok {
 			score += hist[r] * math.Log(hist[r]/CharFreq[r])
 		} else {
-			score += hist[r] * math.Log(hist[r]/1e-6)
+			score += hist[r] * math.Log(hist[r]/1e-10)
 		}
 	}
 
@@ -229,7 +229,7 @@ func Challenge3() {
 }
 
 func Challenge4() {
-  file, err := os.ReadFile("test.txt")
+  file, err := os.ReadFile("4.txt")
   if err != nil {
     panic(err)
   }
@@ -258,9 +258,27 @@ func Challenge4() {
   }
 }
 
+func Challenge5() {
+  data := `Burning 'em, if you ain't quick and nimble
+I go crazy when I hear a cymbal`
+  key := "ICE"
+
+  keyLen := len(key)
+
+  output := make([]byte, len(data))
+  for i, b := range data {
+    output[i] = byte(b) ^ byte(key[i % keyLen])
+  }
+  fmt.Printf("Challenge 5: %x\n", output)
+  if hex.EncodeToString(output) != "0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f" {
+    panic("problem w challenge 5")
+  }
+}
+
 func main() {
 	Challenge1()
 	Challenge2()
 	Challenge3()
   Challenge4()
+  Challenge5()
 }
