@@ -1,6 +1,7 @@
 package main
 
 import (
+  "crypto/aes"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -425,6 +426,69 @@ func Challenge6() {
   }
 }
 
+func Challenge7() {
+  key := []byte("YELLOW SUBMARINE")
+  file, err := os.ReadFile("7.txt")
+  if err != nil {
+    panic("problem opening file")
+  }
+  input, err := base64.StdEncoding.DecodeString(string(file))
+
+  fmt.Printf("\n ********** Challenge 7 ************\n")
+  block, err := aes.NewCipher(key)
+  if err != nil {
+    fmt.Printf("problem creating block\n")
+  }
+  out := make([]byte, block.BlockSize())
+
+  for i := 0; i < len(input); i += 16 {
+    input := input[i:i+16]
+    block.Decrypt(out, input)
+    fmt.Printf("%s", out)
+  }
+  fmt.Printf("********** END Challenge 7 ***********\n")
+}
+
+func Challenge8() {
+  fmt.Printf("********* Challenge 8 ***********\n")
+  file, err := os.ReadFile("8.txt")
+  if err != nil {
+    panic("problem opening file")
+  }
+
+  lines := strings.Split(strings.Trim(string(file),"\n"), "\n")
+  for i, line := range lines {
+    input, err := hex.DecodeString(line)
+    if err != nil {
+      panic("can't decode line to hex")
+    }
+
+    nSame := 0
+    segment := make(map[string]int)
+    for j := 0; j < len(input); j += 16 {
+      inputString := hex.EncodeToString(input[j:j+16])
+      if _, ok := segment[inputString]; ok {
+        segment[inputString] += 1
+      } else {
+        segment[inputString] = 1
+      }
+
+      for _, v := range segment {
+        if v > nSame {
+          nSame = v
+        }
+      }
+    }
+    if nSame > 1 {
+      fmt.Printf("Line %d has a segment repeated %d times out of %d total segments:\n", i, nSame, len(input) / 16)
+      for j := 0; j < len(input); j += 16 {
+        fmt.Printf("%s\n", hex.EncodeToString(input[j:j+16]))
+      }
+    }
+  }
+  fmt.Printf("******** END Challenge 8 ***********\n")
+}
+
 func main() {
 	Challenge1()
 	Challenge2()
@@ -432,4 +496,6 @@ func main() {
   Challenge4()
   Challenge5()
   Challenge6()
+  Challenge7()
+  Challenge8()
 }
