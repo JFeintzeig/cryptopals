@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
   "strings"
+  "jfeintzeig/cryptopals/lib"
 )
 
 var CharFreq map[rune]float64
@@ -134,10 +135,10 @@ func Challenge1() {
 	}
 }
 
-func FixedXOR(s1 string, s2 string) string {
-	if len(s1) != len(s2) {
-		panic("input strings not same length")
-	}
+func Challenge2() {
+	s1 := "1c0111001f010100061a024b53535009181c"
+	s2 := "686974207468652062756c6c277320657965"
+
 	b1, err := hex.DecodeString(s1)
 	if err != nil {
 		panic("problem decoding first string")
@@ -147,21 +148,10 @@ func FixedXOR(s1 string, s2 string) string {
 		panic("problem decoding second string")
 	}
 
-	xor := make([]byte, len(b1))
-	for i := range b1 {
-		xor[i] = b1[i] ^ b2[i]
-	}
-
-	return hex.EncodeToString(xor)
-}
-
-func Challenge2() {
-	s1 := "1c0111001f010100061a024b53535009181c"
-	s2 := "686974207468652062756c6c277320657965"
-
-	xor := FixedXOR(s1, s2)
-	fmt.Printf("Challenge 2: %s\n", xor)
-	if xor != "746865206b696420646f6e277420706c6179" {
+	xor := cryptopals.FixedXOR(b1, b2)
+  xorString := hex.EncodeToString(xor)
+	fmt.Printf("Challenge 2: %s\n", xorString)
+	if xorString != "746865206b696420646f6e277420706c6179" {
 		panic("problem with challenge 2")
 	}
 
