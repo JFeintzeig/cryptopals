@@ -443,7 +443,7 @@ func Challenge8() {
 			panic("can't decode line to hex")
 		}
 
-    nSame := cryptopals.CountMatches(input)
+    nSame := cryptopals.CountMatches(input, 16)
 		if nSame > 1 {
 			fmt.Printf("Line %d has a segment repeated %d times out of %d total segments:\n", i, nSame, len(input)/16)
 			for j := 0; j < len(input); j += 16 {

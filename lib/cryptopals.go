@@ -80,22 +80,34 @@ func AESEncrypt(input []byte, key []byte) []byte {
   return encrypted
 }
 
-func CountMatches(input []byte) int {
-		nSame := 0
-		segment := make(map[string]int)
-		for j := 0; j < len(input); j += 16 {
-			inputString := hex.EncodeToString(input[j : j+16])
-			if _, ok := segment[inputString]; ok {
-				segment[inputString] += 1
-			} else {
-				segment[inputString] = 1
-			}
+func CountMatches(input []byte, blockSize int) int {
+  if blockSize == 0 {
+    fmt.Printf("can't have blocksize of 0, returning\n")
+    return 0
+  }
+	nSame := 0
+	segment := make(map[string]int)
+	for j := 0; j < len(input); j += blockSize {
+		inputString := hex.EncodeToString(input[j : j+blockSize])
+		if _, ok := segment[inputString]; ok {
+			segment[inputString] += 1
+		} else {
+			segment[inputString] = 1
+		}
 
-			for _, v := range segment {
-				if v > nSame {
-					nSame = v
-				}
+		for _, v := range segment {
+			if v > nSame {
+				nSame = v
 			}
+		}
   }
   return nSame
+}
+
+func MakeSingleByteSlice(value byte, length int) []byte {
+  var slice []byte
+  for i := 0; i < length; i++ {
+    slice = append(slice, value)
+  }
+  return slice
 }
