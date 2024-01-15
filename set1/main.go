@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/aes"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -425,17 +424,8 @@ func Challenge7() {
 	input, err := base64.StdEncoding.DecodeString(string(file))
 
 	fmt.Printf("\n ********** Challenge 7 ************\n")
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		fmt.Printf("problem creating block\n")
-	}
-	out := make([]byte, block.BlockSize())
-
-	for i := 0; i < len(input); i += 16 {
-		input := input[i : i+16]
-		block.Decrypt(out, input)
-		fmt.Printf("%s", out)
-	}
+  decrypted := cryptopals.AESDecrypt(input, key)
+  fmt.Printf("%s\n", decrypted)
 	fmt.Printf("********** END Challenge 7 ***********\n")
 }
 
@@ -453,22 +443,7 @@ func Challenge8() {
 			panic("can't decode line to hex")
 		}
 
-		nSame := 0
-		segment := make(map[string]int)
-		for j := 0; j < len(input); j += 16 {
-			inputString := hex.EncodeToString(input[j : j+16])
-			if _, ok := segment[inputString]; ok {
-				segment[inputString] += 1
-			} else {
-				segment[inputString] = 1
-			}
-
-			for _, v := range segment {
-				if v > nSame {
-					nSame = v
-				}
-			}
-		}
+    nSame := cryptopals.CountMatches(input)
 		if nSame > 1 {
 			fmt.Printf("Line %d has a segment repeated %d times out of %d total segments:\n", i, nSame, len(input)/16)
 			for j := 0; j < len(input); j += 16 {

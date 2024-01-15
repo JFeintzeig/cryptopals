@@ -4,45 +4,24 @@ import (
 	"crypto/aes"
 	"encoding/base64"
 	"fmt"
+  "math/rand"
 	"os"
 	"reflect"
 
 	"jfeintzeig/cryptopals/lib"
 )
 
-func PKCS7(input []byte, blocksize int) []byte {
-	padLength := (blocksize - (len(input) % blocksize))
-	if padLength == blocksize {
-		return input
-	}
-
-	padding := make([]byte, padLength)
-	for i := range padding {
-		padding[i] = byte(padLength)
-	}
-	return append(input, padding...)
-}
-
-func PKCS7Unpad(input []byte, blocksize int) []byte {
-	paddingLength := input[len(input)-1]
-	for i := range input {
-		if (i >= (len(input) - int(paddingLength))) && input[i] != paddingLength {
-			return input
-		}
-	}
-	return input[:len(input)-int(paddingLength)]
-}
 
 func Challenge9() {
 	input := []byte("YELLOW SUBMARINE")
 	length := 81
-	padded := PKCS7(input, length)
+	padded := cryptopals.PKCS7(input, length)
 	fmt.Printf("Challenge 9: %s\n", padded)
 	if string(padded) != "YELLOW SUBMARINEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" {
 		panic("problem w challenge 9")
 	}
 
-	pad := PKCS7(input, 16)
+	pad := cryptopals.PKCS7(input, 16)
 	if !reflect.DeepEqual(input, pad) {
 		panic("pkcs7 w/no pad required doesn't work")
 	}
@@ -55,7 +34,7 @@ func CBCEncrypt(payload []byte, key []byte, iv []byte) []byte {
 		fmt.Printf("problem creating block\n")
 	}
 
-	paddedPayload := PKCS7(payload, blockSize)
+	paddedPayload := cryptopals.PKCS7(payload, blockSize)
 
 	out := make([]byte, len(paddedPayload))
 
@@ -91,7 +70,7 @@ func CBCDecrypt(payload []byte, key []byte, iv []byte) []byte {
 		}
 		copy(out[i:i+blockSize], decryptedBlock)
 	}
-	return PKCS7Unpad(out, blockSize)
+	return cryptopals.PKCS7Unpad(out, blockSize)
 }
 
 func Challenge10() {
@@ -121,7 +100,67 @@ func Challenge10() {
 	fmt.Printf("********** END Challenge 10 ***********\n")
 }
 
+func GenerateRandomBytes(length int) []byte {
+  out := make([]byte, length)
+  for i := range out {
+    out[i] = uint8(rand.Intn(255))
+  }
+  return out
+}
+
+func RandomAESKey() []byte {
+  return GenerateRandomBytes(16)
+}
+
+func EncryptionOracle(input []byte) ([]byte, string) {
+  nPrepend := 5 + rand.Intn(5)
+  nAppend :=  5 + rand.Intn(5)
+  payload := append(GenerateRandomBytes(nPrepend), input...)
+  payload = append(payload, GenerateRandomBytes(nAppend)...)
+
+  key := RandomAESKey()
+
+  if rand.Intn(2) == 0 {
+    return cryptopals.AESEncrypt(payload, key), "ECB"
+  } else {
+    iv := GenerateRandomBytes(16)
+    return CBCEncrypt(payload, key, iv), "CBC"
+  }
+}
+
+
+func Challenge11() {
+  key := []byte("YELLOW SUBMARINE")
+  input := []byte("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+  encrypted := cryptopals.AESEncrypt(input, key)
+  decrypted := cryptopals.AESDecrypt(encrypted, key)
+  if !reflect.DeepEqual(input, decrypted) {
+    panic("AES roundtrip fails")
+  }
+
+  nRounds := 10000
+  var guessedMethod string
+  for i := 0; i < nRounds; i++ {
+    encrypted, actualMethod := EncryptionOracle(input)
+    nSame := cryptopals.CountMatches(encrypted)
+    if nSame > 1 {
+      guessedMethod = "ECB"
+    } else {
+      guessedMethod = "CBC"
+    }
+
+    if guessedMethod != actualMethod {
+      panic("uh oh my oracle guessing fails")
+    }
+  }
+
+  fmt.Printf("********** Challenge 11 ***********\n")
+  fmt.Printf("Guessed ECB / CBC correct for %d rounds\n", nRounds)
+  fmt.Printf("********** END Challenge 11 ***********\n")
+}
+
 func main() {
 	Challenge9()
 	Challenge10()
+	Challenge11()
 }
