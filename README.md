@@ -5,5 +5,5 @@ Solutions to [cryptopals](https://cryptopals.com/) in `golang`
 # Instructions
 
 ```
-go run set1/main.go
+cd set1/; go run main.go
 ```
