@@ -87,7 +87,7 @@ func CountMatches(input []byte, blockSize int) int {
   }
 	nSame := 0
 	segment := make(map[string]int)
-	for j := 0; j < len(input); j += blockSize {
+	for j := 0; j < len(input)-blockSize; j += blockSize {
 		inputString := hex.EncodeToString(input[j : j+blockSize])
 		if _, ok := segment[inputString]; ok {
 			segment[inputString] += 1
