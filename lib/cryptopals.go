@@ -2,8 +2,8 @@ package cryptopals
 
 import (
 	"crypto/aes"
-  "encoding/hex"
-  "fmt"
+	"encoding/hex"
+	"fmt"
 )
 
 func FixedXOR(b1 []byte, b2 []byte) []byte {
@@ -43,48 +43,48 @@ func PKCS7Unpad(input []byte, blocksize int) []byte {
 
 func AESDecrypt(input []byte, key []byte) []byte {
 	block, err := aes.NewCipher(key)
-  blockSize := block.BlockSize()
+	blockSize := block.BlockSize()
 
 	if err != nil {
 		fmt.Printf("problem creating block\n")
 	}
 
-  decrypted := make([]byte, 0)
+	decrypted := make([]byte, 0)
 	out := make([]byte, block.BlockSize())
 
 	for i := 0; i < len(input); i += blockSize {
 		thisblock := input[i : i+blockSize]
 		block.Decrypt(out, thisblock)
-    decrypted = append(decrypted, out...)
+		decrypted = append(decrypted, out...)
 	}
-  return PKCS7Unpad(decrypted, blockSize)
+	return PKCS7Unpad(decrypted, blockSize)
 }
 
 func AESEncrypt(input []byte, key []byte) []byte {
 	block, err := aes.NewCipher(key)
-  blockSize := block.BlockSize()
+	blockSize := block.BlockSize()
 
 	if err != nil {
 		fmt.Printf("problem creating block\n")
 	}
 
-  paddedInput := PKCS7(input, blockSize)
-  encrypted := make([]byte, 0)
+	paddedInput := PKCS7(input, blockSize)
+	encrypted := make([]byte, 0)
 	out := make([]byte, block.BlockSize())
 
 	for i := 0; i < len(paddedInput); i += blockSize {
 		thisblock := paddedInput[i : i+blockSize]
 		block.Encrypt(out, thisblock)
-    encrypted = append(encrypted, out...)
+		encrypted = append(encrypted, out...)
 	}
-  return encrypted
+	return encrypted
 }
 
 func CountMatches(input []byte, blockSize int) int {
-  if blockSize == 0 {
-    fmt.Printf("can't have blocksize of 0, returning\n")
-    return 0
-  }
+	if blockSize == 0 {
+		fmt.Printf("can't have blocksize of 0, returning\n")
+		return 0
+	}
 	nSame := 0
 	segment := make(map[string]int)
 	for j := 0; j < len(input)-blockSize; j += blockSize {
@@ -100,14 +100,14 @@ func CountMatches(input []byte, blockSize int) int {
 				nSame = v
 			}
 		}
-  }
-  return nSame
+	}
+	return nSame
 }
 
 func MakeSingleByteSlice(value byte, length int) []byte {
-  var slice []byte
-  for i := 0; i < length; i++ {
-    slice = append(slice, value)
-  }
-  return slice
+	var slice []byte
+	for i := 0; i < length; i++ {
+		slice = append(slice, value)
+	}
+	return slice
 }
