@@ -15,10 +15,12 @@ import (
 
 var ch12AESKey []byte
 var ch13AESKey []byte
+var ch14AESKey []byte
 
 func init() {
 	ch12AESKey = RandomAESKey()
 	ch13AESKey = RandomAESKey()
+	ch14AESKey = RandomAESKey()
 }
 
 func Challenge9() {
@@ -395,6 +397,13 @@ func Ch13DecryptAndParse(ciphertext []byte) map[string]string {
 	return ParseParams(string(decrypted))
 }
 
+// NB: problems with challenge 13:
+// - i need to be able to encode & and = in GetProfile, because
+//   i need it to decrypt the string that gets appended to the hashing
+//   theoretically this is needed to know how many characters of this
+//   append string i need to push into the next block
+// - i assumed the inputs get padded via PKCS7. i dont know how to get
+//   the hash for `admin` without doing this.
 func Challenge13() {
 	test := "baz=qux&foo=bar&zap=zazzle"
 	testParams := ParseParams(test)
@@ -466,10 +475,28 @@ func Challenge13() {
 	}
 }
 
+func Ch14Oracle(input []byte) []byte {
+  nBytesPrepend := uint8(rand.Intn(255))
+  randPrepend := GenerateRandomBytes(int(nBytesPrepend))
+	b64secret := "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK"
+	secret, err := base64.StdEncoding.DecodeString(string(b64secret))
+	if err != nil {
+		panic("problem b64 decoding secret")
+	}
+	toEncrypt := append(randPrepend, input...)
+	toEncrypt = append(toEncrypt, secret...)
+	return cryptopals.AESEncrypt(toEncrypt, ch14AESKey)
+}
+
+func Challenge14() {
+	fmt.Printf("********** Challenge 14 ***********\n")
+}
+
 func main() {
 	Challenge9()
 	Challenge10()
 	Challenge11()
 	Challenge12()
 	Challenge13()
+	Challenge14()
 }
