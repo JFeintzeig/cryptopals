@@ -16,11 +16,14 @@ import (
 var ch12AESKey []byte
 var ch13AESKey []byte
 var ch14AESKey []byte
+var ch14Prepend []byte
 
 func init() {
 	ch12AESKey = RandomAESKey()
 	ch13AESKey = RandomAESKey()
 	ch14AESKey = RandomAESKey()
+  nBytesPrepend := uint8(rand.Intn(255))
+  ch14Prepend = GenerateRandomBytes(int(nBytesPrepend))
 }
 
 func Challenge9() {
