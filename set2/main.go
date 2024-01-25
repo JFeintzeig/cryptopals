@@ -22,8 +22,8 @@ func init() {
 	ch12AESKey = RandomAESKey()
 	ch13AESKey = RandomAESKey()
 	ch14AESKey = RandomAESKey()
-  nBytesPrepend := uint8(rand.Intn(255))
-  ch14Prepend = GenerateRandomBytes(int(nBytesPrepend))
+	nBytesPrepend := uint8(rand.Intn(25))
+	ch14Prepend = GenerateRandomBytes(int(nBytesPrepend))
 }
 
 func Challenge9() {
@@ -84,7 +84,11 @@ func CBCDecrypt(payload []byte, key []byte, iv []byte) []byte {
 		}
 		copy(out[i:i+blockSize], decryptedBlock)
 	}
-	return cryptopals.PKCS7Unpad(out, blockSize)
+	unpadded, err := cryptopals.PKCS7Unpad(out, blockSize)
+	if err != nil {
+		panic("problem with unpadding")
+	}
+	return unpadded
 }
 
 func Challenge10() {
@@ -401,13 +405,14 @@ func Ch13DecryptAndParse(ciphertext []byte) map[string]string {
 }
 
 // NB: problems with challenge 13:
-// - i need to be able to encode & and = in GetProfile, because
-//   i need it to decrypt the string that gets appended to the hashing
-//   theoretically this is needed to know how many characters of this
-//   append string i need to push into the next block
-// - i assumed the inputs get padded via PKCS7. i dont know how to get
-//   the hash for `admin` without doing this.
+//   - i need to be able to encode & and = in GetProfile, because
+//     i need it to decrypt the string that gets appended to the hashing
+//     theoretically this is needed to know how many characters of this
+//     append string i need to push into the next block
+//   - i assumed the inputs get padded via PKCS7. i dont know how to get
+//     the hash for `admin` without doing this.
 func Challenge13() {
+	fmt.Printf("*********** Challenge 13 ***********")
 	test := "baz=qux&foo=bar&zap=zazzle"
 	testParams := ParseParams(test)
 
@@ -476,23 +481,61 @@ func Challenge13() {
 	if output["role"] != "admin" {
 		panic("challenge 13 role is not admin")
 	}
+	fmt.Printf("*********** END Challenge 13 ***********")
 }
 
 func Ch14Oracle(input []byte) []byte {
-  nBytesPrepend := uint8(rand.Intn(255))
-  randPrepend := GenerateRandomBytes(int(nBytesPrepend))
 	b64secret := "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK"
 	secret, err := base64.StdEncoding.DecodeString(string(b64secret))
 	if err != nil {
 		panic("problem b64 decoding secret")
 	}
-	toEncrypt := append(randPrepend, input...)
+	toEncrypt := append(ch14Prepend, input...)
 	toEncrypt = append(toEncrypt, secret...)
 	return cryptopals.AESEncrypt(toEncrypt, ch14AESKey)
 }
 
+// TODO: if secret string is longer than blocksize, this fails
 func Challenge14() {
 	fmt.Printf("********** Challenge 14 ***********\n")
+	blockSize, offset := CalculateBlockSizeWithOffset(Ch14Oracle)
+	fmt.Printf("blocksize: %d offset: %d\n", blockSize, offset)
+
+	lenSecret := CalculateLengthSecret(Ch14Oracle)
+	lenAppendSecret := lenSecret - offset
+
+	seedCharacter := byte(0x61)
+	initialSeed := cryptopals.MakeSingleByteSlice(seedCharacter, blockSize-offset+blockSize-1)
+	decryptedBytes := make([]byte, 0)
+
+	decrypted := DecryptByteAtATimeECB(Ch14Oracle, blockSize, lenAppendSecret, initialSeed, offset, decryptedBytes)
+	fmt.Printf("decrypted secret string:\n%s\n", string(decrypted))
+	fmt.Printf("*********** END Challenge 14 ***********\n")
+}
+
+func Challenge15() {
+	fmt.Printf("*********** Challenge 15 ***********\n")
+
+	t1 := []byte("ICE ICE BABY\x04\x04\x04\x04")
+	t2 := []byte("ICE ICE BABY\x05\x05\x05\x05")
+	t3 := []byte("ICE ICE BABY\x01\x02\x03\x04")
+
+	_, err := cryptopals.PKCS7Unpad(t1, 16)
+	if err != nil {
+		panic("pkcs7 valid unpad test failed")
+	}
+	_, err = cryptopals.PKCS7Unpad(t2, 16)
+	if err == nil {
+		panic("pkcs7 invalid unpad test 1 failed")
+	}
+	_, err = cryptopals.PKCS7Unpad(t3, 16)
+	if err == nil {
+		panic("pkcs7 invalid unpad test 2 failed")
+	}
+
+	fmt.Printf("Challenge 15 successful\n")
+
+	fmt.Printf("*********** END Challenge 15 ***********\n")
 }
 
 func main() {
@@ -502,4 +545,5 @@ func main() {
 	Challenge12()
 	Challenge13()
 	Challenge14()
+	Challenge15()
 }

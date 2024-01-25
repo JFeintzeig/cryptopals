@@ -3,6 +3,7 @@ package cryptopals
 import (
 	"crypto/aes"
 	"encoding/hex"
+	"errors"
 	"fmt"
 )
 
@@ -31,14 +32,14 @@ func PKCS7(input []byte, blocksize int) []byte {
 	return append(input, padding...)
 }
 
-func PKCS7Unpad(input []byte, blocksize int) []byte {
+func PKCS7Unpad(input []byte, blocksize int) ([]byte, error) {
 	paddingLength := input[len(input)-1]
 	for i := range input {
 		if (i >= (len(input) - int(paddingLength))) && input[i] != paddingLength {
-			return input
+			return input, errors.New("invalid pkcs7 padding")
 		}
 	}
-	return input[:len(input)-int(paddingLength)]
+	return input[:len(input)-int(paddingLength)], nil
 }
 
 func AESDecrypt(input []byte, key []byte) []byte {
@@ -57,7 +58,11 @@ func AESDecrypt(input []byte, key []byte) []byte {
 		block.Decrypt(out, thisblock)
 		decrypted = append(decrypted, out...)
 	}
-	return PKCS7Unpad(decrypted, blockSize)
+	unpadded, err := PKCS7Unpad(decrypted, blockSize)
+	if err != nil {
+		panic("problem unpadding result")
+	}
+	return unpadded
 }
 
 func AESEncrypt(input []byte, key []byte) []byte {
