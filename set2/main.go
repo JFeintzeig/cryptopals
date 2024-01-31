@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/aes"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"math/rand"
 	"os"
@@ -17,13 +18,18 @@ var ch12AESKey []byte
 var ch13AESKey []byte
 var ch14AESKey []byte
 var ch14Prepend []byte
+var ch16IV []byte
+var ch16AESKey []byte
 
 func init() {
 	ch12AESKey = RandomAESKey()
 	ch13AESKey = RandomAESKey()
 	ch14AESKey = RandomAESKey()
-	nBytesPrepend := uint8(rand.Intn(25))
+	nBytesPrepend := uint8(rand.Intn(14))
 	ch14Prepend = GenerateRandomBytes(int(nBytesPrepend))
+
+	ch16IV = RandomAESKey()
+	ch16AESKey = RandomAESKey()
 }
 
 func Challenge9() {
@@ -538,6 +544,72 @@ func Challenge15() {
 	fmt.Printf("*********** END Challenge 15 ***********\n")
 }
 
+func Ch16Oracle(input []byte) []byte {
+	prependBytes := []byte("comment1=cooking%20MCs;userdata=")
+	appendBytes := []byte(";comment2=%20like%20a%20pound%20of%20bacon")
+
+	sanitizedInput := strings.ReplaceAll(string(input), ";", "/;/")
+	sanitizedInput = strings.ReplaceAll(sanitizedInput, "=", "/=/")
+
+	payload := append(prependBytes, sanitizedInput...)
+	payload = append(payload, appendBytes...)
+
+	paddedPayload := cryptopals.PKCS7(payload, 16)
+
+	return CBCEncrypt(paddedPayload, ch16AESKey, ch16IV)
+}
+
+func Ch16CheckAdmin(ciphertext []byte) bool {
+	decrypted := CBCDecrypt(ciphertext, ch16AESKey, ch16IV)
+	return strings.Contains(string(decrypted), ";admin=true;")
+}
+
+func FlipBit(b byte, bitNumber uint8) byte {
+	magicBit := (b >> bitNumber) & 0x01
+	if magicBit == 1 {
+		return 0b01111111 & b
+	} else {
+		return 0b10000000 | b
+	}
+}
+
+func Challenge16() {
+	fmt.Printf("******************* Challenge 16 *****************\n")
+	encrypted := Ch16Oracle([]byte(";admin=true;"))
+	hasAdmin := Ch16CheckAdmin(encrypted)
+	if hasAdmin {
+		panic("ch 16 test fails: shouldnt be able to set admin=true directly")
+	}
+
+	// TODO: rewrite CalculateBlockSizeWithOffset
+	// stimulus -> response
+	// let's say blocksize is 16
+	// input 14: output 16
+	// input 17: output 32
+	// <N bytes unknown> ... input ...
+	// N = 5, blocksize = 16
+	// when we give 12 bytes input, output jumps from 16 -> 32
+	// when we give 28, output jumps from 32 to 48
+	//blockSize, offset := CalculateBlockSizeWithOffset(Ch16Oracle)
+	//fmt.Printf("%d %d\n", blockSize, offset)
+
+	// ;admin=true;
+	magicString, _ := hex.DecodeString("3B61646D696E3D747275653B")
+	magicString[0] = FlipBit(magicString[0], 7)
+	magicString[6] = FlipBit(magicString[6], 7)
+	magicString[11] = FlipBit(magicString[11], 7)
+
+	input := append(magicString, cryptopals.MakeSingleByteSlice(0x61, 16-len(magicString))...)
+	cipher := Ch16Oracle(input)
+
+	cipher[16] = FlipBit(cipher[16], 7)
+	cipher[22] = FlipBit(cipher[22], 7)
+	cipher[27] = FlipBit(cipher[27], 7)
+	isAdmin := Ch16CheckAdmin(cipher)
+	fmt.Printf("\n\nisAdmin: %t\n\n", isAdmin)
+	fmt.Printf("******************* END Challenge 16 *****************\n")
+}
+
 func main() {
 	Challenge9()
 	Challenge10()
@@ -546,4 +618,5 @@ func main() {
 	Challenge13()
 	Challenge14()
 	Challenge15()
+	Challenge16()
 }
