@@ -177,8 +177,8 @@ func Challenge11() {
 		}
 	}
 
-	fmt.Printf("********** Challenge 11 ***********\n")
-	fmt.Printf("Guessed ECB / CBC correct for %d rounds\n", nRounds)
+	fmt.Printf("********** Challenge 11 ***********\n\n")
+	fmt.Printf("Guessed ECB / CBC correct for %d rounds\n\n", nRounds)
 	fmt.Printf("********** END Challenge 11 ***********\n")
 }
 
@@ -418,7 +418,7 @@ func Ch13DecryptAndParse(ciphertext []byte) map[string]string {
 //   - i assumed the inputs get padded via PKCS7. i dont know how to get
 //     the hash for `admin` without doing this.
 func Challenge13() {
-	fmt.Printf("*********** Challenge 13 ***********")
+	fmt.Printf("*********** Challenge 13 ***********\n\n")
 	test := "baz=qux&foo=bar&zap=zazzle"
 	testParams := ParseParams(test)
 
@@ -487,7 +487,7 @@ func Challenge13() {
 	if output["role"] != "admin" {
 		panic("challenge 13 role is not admin")
 	}
-	fmt.Printf("*********** END Challenge 13 ***********")
+	fmt.Printf("*********** END Challenge 13 ***********\n\n")
 }
 
 func Ch14Oracle(input []byte) []byte {
@@ -503,7 +503,8 @@ func Ch14Oracle(input []byte) []byte {
 
 // TODO: if secret string is longer than blocksize, this fails
 func Challenge14() {
-	fmt.Printf("********** Challenge 14 ***********\n")
+	fmt.Printf("********** Challenge 14 ***********\n\n")
+  fmt.Printf("Ch14 prepend: %d\n", len(ch14Prepend))
 	blockSize, offset := CalculateBlockSizeWithOffset(Ch14Oracle)
 	fmt.Printf("blocksize: %d offset: %d\n", blockSize, offset)
 
@@ -516,7 +517,7 @@ func Challenge14() {
 
 	decrypted := DecryptByteAtATimeECB(Ch14Oracle, blockSize, lenAppendSecret, initialSeed, offset, decryptedBytes)
 	fmt.Printf("decrypted secret string:\n%s\n", string(decrypted))
-	fmt.Printf("*********** END Challenge 14 ***********\n")
+	fmt.Printf("*********** END Challenge 14 ***********\n\n")
 }
 
 func Challenge15() {
@@ -539,7 +540,7 @@ func Challenge15() {
 		panic("pkcs7 invalid unpad test 2 failed")
 	}
 
-	fmt.Printf("Challenge 15 successful\n")
+	fmt.Printf("\nChallenge 15 successful\n\n")
 
 	fmt.Printf("*********** END Challenge 15 ***********\n")
 }
@@ -581,24 +582,16 @@ func Challenge16() {
 		panic("ch 16 test fails: shouldnt be able to set admin=true directly")
 	}
 
-	// TODO: rewrite CalculateBlockSizeWithOffset
-	// stimulus -> response
-	// let's say blocksize is 16
-	// input 14: output 16
-	// input 17: output 32
-	// <N bytes unknown> ... input ...
-	// N = 5, blocksize = 16
-	// when we give 12 bytes input, output jumps from 16 -> 32
-	// when we give 28, output jumps from 32 to 48
-	//blockSize, offset := CalculateBlockSizeWithOffset(Ch16Oracle)
-	//fmt.Printf("%d %d\n", blockSize, offset)
-
 	// ;admin=true;
 	magicString, _ := hex.DecodeString("3B61646D696E3D747275653B")
 	magicString[0] = FlipBit(magicString[0], 7)
 	magicString[6] = FlipBit(magicString[6], 7)
 	magicString[11] = FlipBit(magicString[11], 7)
 
+  // NB: this implicitly assumes the oracle prepend string _is_ an even number of blocks.
+  // I'm not sure how to calculate this offset a priori given our methodology only works for
+  // ECB mode. Trying to look at when the ciphertext length jumps up works for calculating
+  // blocksize, but not for offset since the oracle also append's bytes
 	input := append(magicString, cryptopals.MakeSingleByteSlice(0x61, 16-len(magicString))...)
 	cipher := Ch16Oracle(input)
 
@@ -606,7 +599,7 @@ func Challenge16() {
 	cipher[22] = FlipBit(cipher[22], 7)
 	cipher[27] = FlipBit(cipher[27], 7)
 	isAdmin := Ch16CheckAdmin(cipher)
-	fmt.Printf("\n\nisAdmin: %t\n\n", isAdmin)
+	fmt.Printf("\nisAdmin: %t\n\n", isAdmin)
 	fmt.Printf("******************* END Challenge 16 *****************\n")
 }
 
