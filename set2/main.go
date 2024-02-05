@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/aes"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -22,14 +21,14 @@ var ch16IV []byte
 var ch16AESKey []byte
 
 func init() {
-	ch12AESKey = RandomAESKey()
-	ch13AESKey = RandomAESKey()
-	ch14AESKey = RandomAESKey()
+	ch12AESKey = cryptopals.RandomAESKey()
+	ch13AESKey = cryptopals.RandomAESKey()
+	ch14AESKey = cryptopals.RandomAESKey()
 	nBytesPrepend := uint8(rand.Intn(14))
-	ch14Prepend = GenerateRandomBytes(int(nBytesPrepend))
+	ch14Prepend = cryptopals.GenerateRandomBytes(int(nBytesPrepend))
 
-	ch16IV = RandomAESKey()
-	ch16AESKey = RandomAESKey()
+	ch16IV = cryptopals.RandomAESKey()
+	ch16AESKey = cryptopals.RandomAESKey()
 }
 
 func Challenge9() {
@@ -47,56 +46,6 @@ func Challenge9() {
 	}
 }
 
-func CBCEncrypt(payload []byte, key []byte, iv []byte) []byte {
-	block, err := aes.NewCipher(key)
-	blockSize := block.BlockSize()
-	if err != nil {
-		fmt.Printf("problem creating block\n")
-	}
-
-	paddedPayload := cryptopals.PKCS7(payload, blockSize)
-
-	out := make([]byte, len(paddedPayload))
-
-	for i := 0; i < len(paddedPayload); i += blockSize {
-		var input []byte
-		if i == 0 {
-			input = cryptopals.FixedXOR(iv, paddedPayload[i:i+blockSize])
-		} else {
-			input = cryptopals.FixedXOR(out[i-blockSize:i], paddedPayload[i:i+blockSize])
-		}
-		block.Encrypt(out[i:i+blockSize], input)
-	}
-	return out
-}
-
-func CBCDecrypt(payload []byte, key []byte, iv []byte) []byte {
-	block, err := aes.NewCipher(key)
-	blockSize := block.BlockSize()
-	if err != nil {
-		fmt.Printf("problem creating block\n")
-	}
-
-	out := make([]byte, len(payload))
-	rawDecryptedBlock := make([]byte, len(key))
-	decryptedBlock := make([]byte, len(key))
-
-	for i := 0; i < len(payload); i += blockSize {
-		block.Decrypt(rawDecryptedBlock, payload[i:i+blockSize])
-		if i == 0 {
-			decryptedBlock = cryptopals.FixedXOR(iv, rawDecryptedBlock)
-		} else {
-			decryptedBlock = cryptopals.FixedXOR(payload[i-blockSize:i], rawDecryptedBlock)
-		}
-		copy(out[i:i+blockSize], decryptedBlock)
-	}
-	unpadded, err := cryptopals.PKCS7Unpad(out, blockSize)
-	if err != nil {
-		panic("problem with unpadding")
-	}
-	return unpadded
-}
-
 func Challenge10() {
 	key := []byte("YELLOW SUBMARINE")
 	iv := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
@@ -109,8 +58,11 @@ func Challenge10() {
 	fmt.Printf("\n ********** Challenge 10 ************\n")
 
 	test := []byte("this is a string and another one what ya now")
-	encrypted := CBCEncrypt(test, key, iv)
-	decrypted := CBCDecrypt(encrypted, key, iv)
+	encrypted := cryptopals.CBCEncrypt(test, key, iv)
+	decrypted, err := cryptopals.CBCDecrypt(encrypted, key, iv)
+  if err != nil {
+    panic("problem w CBC decrypt padding")
+  }
 	if !reflect.DeepEqual(test, decrypted) {
 		fmt.Printf("%s %v\n", test, test)
 		fmt.Printf("%v\n", encrypted)
@@ -118,37 +70,28 @@ func Challenge10() {
 		panic("CBC mode roundtrip doesn't work")
 	}
 
-	decrypted = CBCDecrypt(input, key, iv)
+	decrypted, err = cryptopals.CBCDecrypt(input, key, iv)
+  if err != nil {
+    panic("problem w CBC decrypt padding")
+  }
 	fmt.Printf("%s\n", decrypted)
 
 	fmt.Printf("********** END Challenge 10 ***********\n")
 }
 
-func GenerateRandomBytes(length int) []byte {
-	out := make([]byte, length)
-	for i := range out {
-		out[i] = uint8(rand.Intn(255))
-	}
-	return out
-}
-
-func RandomAESKey() []byte {
-	return GenerateRandomBytes(16)
-}
-
 func EncryptionOracle(input []byte) ([]byte, string) {
 	nPrepend := 5 + rand.Intn(5)
 	nAppend := 5 + rand.Intn(5)
-	payload := append(GenerateRandomBytes(nPrepend), input...)
-	payload = append(payload, GenerateRandomBytes(nAppend)...)
+	payload := append(cryptopals.GenerateRandomBytes(nPrepend), input...)
+	payload = append(payload, cryptopals.GenerateRandomBytes(nAppend)...)
 
-	key := RandomAESKey()
+	key := cryptopals.RandomAESKey()
 
 	if rand.Intn(2) == 0 {
 		return cryptopals.AESEncrypt(payload, key), "ECB"
 	} else {
-		iv := GenerateRandomBytes(16)
-		return CBCEncrypt(payload, key, iv), "CBC"
+		iv := cryptopals.GenerateRandomBytes(16)
+		return cryptopals.CBCEncrypt(payload, key, iv), "CBC"
 	}
 }
 
@@ -557,11 +500,14 @@ func Ch16Oracle(input []byte) []byte {
 
 	paddedPayload := cryptopals.PKCS7(payload, 16)
 
-	return CBCEncrypt(paddedPayload, ch16AESKey, ch16IV)
+	return cryptopals.CBCEncrypt(paddedPayload, ch16AESKey, ch16IV)
 }
 
 func Ch16CheckAdmin(ciphertext []byte) bool {
-	decrypted := CBCDecrypt(ciphertext, ch16AESKey, ch16IV)
+	decrypted, err := cryptopals.CBCDecrypt(ciphertext, ch16AESKey, ch16IV)
+  if err != nil {
+    panic("problem w CBC decrypt padding")
+  }
 	return strings.Contains(string(decrypted), ";admin=true;")
 }
 

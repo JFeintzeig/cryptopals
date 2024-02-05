@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+  "math/rand"
 )
 
 func FixedXOR(b1 []byte, b2 []byte) []byte {
@@ -115,4 +116,62 @@ func MakeSingleByteSlice(value byte, length int) []byte {
 		slice = append(slice, value)
 	}
 	return slice
+}
+
+func GenerateRandomBytes(length int) []byte {
+	out := make([]byte, length)
+	for i := range out {
+		out[i] = uint8(rand.Intn(255))
+	}
+	return out
+}
+
+func RandomAESKey() []byte {
+	return GenerateRandomBytes(16)
+}
+
+func CBCEncrypt(payload []byte, key []byte, iv []byte) []byte {
+	block, err := aes.NewCipher(key)
+	blockSize := block.BlockSize()
+	if err != nil {
+		fmt.Printf("problem creating block\n")
+	}
+
+	paddedPayload := PKCS7(payload, blockSize)
+
+	out := make([]byte, len(paddedPayload))
+
+	for i := 0; i < len(paddedPayload); i += blockSize {
+		var input []byte
+		if i == 0 {
+			input = FixedXOR(iv, paddedPayload[i:i+blockSize])
+		} else {
+			input = FixedXOR(out[i-blockSize:i], paddedPayload[i:i+blockSize])
+		}
+		block.Encrypt(out[i:i+blockSize], input)
+	}
+	return out
+}
+
+func CBCDecrypt(payload []byte, key []byte, iv []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	blockSize := block.BlockSize()
+	if err != nil {
+		fmt.Printf("problem creating block\n")
+	}
+
+	out := make([]byte, len(payload))
+	rawDecryptedBlock := make([]byte, len(key))
+	decryptedBlock := make([]byte, len(key))
+
+	for i := 0; i < len(payload); i += blockSize {
+		block.Decrypt(rawDecryptedBlock, payload[i:i+blockSize])
+		if i == 0 {
+			decryptedBlock = FixedXOR(iv, rawDecryptedBlock)
+		} else {
+			decryptedBlock = FixedXOR(payload[i-blockSize:i], rawDecryptedBlock)
+		}
+		copy(out[i:i+blockSize], decryptedBlock)
+	}
+	return PKCS7Unpad(out, blockSize)
 }
