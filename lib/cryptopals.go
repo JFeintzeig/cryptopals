@@ -22,9 +22,6 @@ func FixedXOR(b1 []byte, b2 []byte) []byte {
 
 func PKCS7(input []byte, blocksize int) []byte {
 	padLength := (blocksize - (len(input) % blocksize))
-	if padLength == blocksize {
-		return input
-	}
 
 	padding := make([]byte, padLength)
 	for i := range padding {
@@ -35,9 +32,13 @@ func PKCS7(input []byte, blocksize int) []byte {
 
 func PKCS7Unpad(input []byte, blocksize int) ([]byte, error) {
 	paddingLength := input[len(input)-1]
+
+  if paddingLength == 0x00 || int(paddingLength) > blocksize {
+    return nil, errors.New("invalid pkcs7 padding: should always be between 1 and <BLOCKSIZE> bytes")
+  }
 	for i := range input {
 		if (i >= (len(input) - int(paddingLength))) && input[i] != paddingLength {
-			return input, errors.New("invalid pkcs7 padding")
+			return nil, errors.New("invalid pkcs7 padding")
 		}
 	}
 	return input[:len(input)-int(paddingLength)], nil
