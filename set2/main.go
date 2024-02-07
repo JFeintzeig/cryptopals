@@ -41,7 +41,9 @@ func Challenge9() {
 	}
 
 	pad := cryptopals.PKCS7(input, 16)
-	if !reflect.DeepEqual(input, pad) {
+  paddedInput := append(input, cryptopals.MakeSingleByteSlice(0x10, 16)...)
+	if !reflect.DeepEqual(paddedInput, pad) {
+    fmt.Printf("%v\n%v", pad, paddedInput)
 		panic("pkcs7 w/no pad required doesn't work")
 	}
 }
@@ -262,11 +264,16 @@ func Challenge12() {
 
 	lenSecret := CalculateLengthSecret(Ch12Oracle)
 	decrypted := DecryptByteAtATimeECB(Ch12Oracle, blockSize, lenSecret, initialSeed, 0, decryptedBytes)
+  decrypted, err := cryptopals.PKCS7Unpad(decrypted, blockSize)
+  if err != nil {
+    panic("pkcs7 unpadding failed for challenge 12")
+  }
 
 	fmt.Printf("decrypted:\n\n%s\n", decrypted)
 
 	truth := []byte{82, 111, 108, 108, 105, 110, 39, 32, 105, 110, 32, 109, 121, 32, 53, 46, 48, 10, 87, 105, 116, 104, 32, 109, 121, 32, 114, 97, 103, 45, 116, 111, 112, 32, 100, 111, 119, 110, 32, 115, 111, 32, 109, 121, 32, 104, 97, 105, 114, 32, 99, 97, 110, 32, 98, 108, 111, 119, 10, 84, 104, 101, 32, 103, 105, 114, 108, 105, 101, 115, 32, 111, 110, 32, 115, 116, 97, 110, 100, 98, 121, 32, 119, 97, 118, 105, 110, 103, 32, 106, 117, 115, 116, 32, 116, 111, 32, 115, 97, 121, 32, 104, 105, 10, 68, 105, 100, 32, 121, 111, 117, 32, 115, 116, 111, 112, 63, 32, 78, 111, 44, 32, 73, 32, 106, 117, 115, 116, 32, 100, 114, 111, 118, 101, 32, 98, 121, 10}
 	if string(decrypted) != string(truth) {
+    fmt.Printf("%v\n%v\n", decrypted, truth)
 		panic("failed to decrypt")
 	}
 	fmt.Printf("********** END Challenge 12 ***********\n")
@@ -404,7 +411,9 @@ func Challenge13() {
 	defaultPadding := blockSize - (lenSecret % blockSize)
 	// `user` is 4 characters to chop off end, so add 4
 	// but i want my email to end in @gmail.com (10 characters), so subtract 10
-	lenEmail := defaultPadding + 4 - 10 // `user` is 4 characters to chop off end, but i want my email to end in @gmail.com, which is 10
+  // NB: weeks later i fix how my PKCS pad/unpad works so it always adds 1-16 bytes,
+  // and now my math is off and somehow adding 5 bytes instead of 4 works.
+	lenEmail := defaultPadding + 5 - 10 // `user` is 4 characters to chop off end, but i want my email to end in @gmail.com, which is 10
 	email := cryptopals.MakeSingleByteSlice(0x61, lenEmail)
 	email = append(email, []byte("@gmail.com")...)
 	encryptedNoRole := Ch13Oracle(email)
@@ -428,6 +437,7 @@ func Challenge13() {
 	output = Ch13DecryptAndParse(payload)
 	fmt.Printf("output: %v\n", output)
 	if output["role"] != "admin" {
+    fmt.Printf("%v\n", output)
 		panic("challenge 13 role is not admin")
 	}
 	fmt.Printf("*********** END Challenge 13 ***********\n\n")
