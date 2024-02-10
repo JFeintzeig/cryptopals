@@ -2,6 +2,7 @@ package cryptopals
 
 import (
 	"crypto/aes"
+  "encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -175,4 +176,33 @@ func CBCDecrypt(payload []byte, key []byte, iv []byte) ([]byte, error) {
 		copy(out[i:i+blockSize], decryptedBlock)
 	}
 	return PKCS7Unpad(out, blockSize)
+}
+
+func CTRDecrypt(ciphertext []byte, key []byte, nonce []byte) []byte {
+	block, err := aes.NewCipher(key)
+  if err != nil {
+    panic("problem creating aes cipher for key")
+  }
+	blockSize := block.BlockSize()
+
+	decrypted := make([]byte, 0)
+	out := make([]byte, block.BlockSize())
+  counterBytes := make([]byte, 8)
+
+	for i := 0; i < len(ciphertext); i += blockSize {
+    binary.LittleEndian.PutUint64(counterBytes, uint64(i/blockSize))
+    keystream := append(nonce, counterBytes...)
+		block.Encrypt(out, keystream)
+
+    end := i+blockSize
+    if end > len(ciphertext) {
+      end = len(ciphertext)
+    }
+
+		thisblock := ciphertext[i : end]
+    out = FixedXOR(out[:len(thisblock)], thisblock)
+		decrypted = append(decrypted, out...)
+	}
+
+	return decrypted
 }
