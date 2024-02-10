@@ -178,7 +178,7 @@ func CBCDecrypt(payload []byte, key []byte, iv []byte) ([]byte, error) {
 	return PKCS7Unpad(out, blockSize)
 }
 
-func CTRDecrypt(ciphertext []byte, key []byte, nonce []byte) []byte {
+func CTREncrypt(ciphertext []byte, key []byte, nonce []byte) []byte {
 	block, err := aes.NewCipher(key)
   if err != nil {
     panic("problem creating aes cipher for key")
