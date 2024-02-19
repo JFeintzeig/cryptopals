@@ -58,6 +58,11 @@ func (mt *MT19937) Rand() uint64 {
 	return rand
 }
 
+func (mt *MT19937) SetState(index int, state []uint64) {
+  mt.state = state
+  mt.index = index
+}
+
 func NewMT19937(nbits int, seed uint64) *MT19937 {
 	var w, n, m, r, u, s, t, l int
 	var a, d, b, c, f uint64
