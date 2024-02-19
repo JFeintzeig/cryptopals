@@ -49,6 +49,6 @@ func main() {
 		panic("problem cracking seed")
 	}
 
-	fmt.Printf("Challenge 22 Success, seeds match!")
+	fmt.Printf("Challenge 22 Success, seeds match!\n")
 	fmt.Printf("ending at %v\n", time.Now())
 }

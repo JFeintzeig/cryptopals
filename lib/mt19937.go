@@ -29,12 +29,12 @@ func (mt *MT19937) initialize(seed uint64) {
 
 func (mt *MT19937) update() {
 	for i := range mt.state {
-		mt.state[i] = mt.state[(i+mt.m)%mt.n] ^ (mt.AMult((mt.state[i] & mt.upperMask) | (mt.state[(i+1)%mt.n] & mt.lowerMask)))
+		mt.state[i] = mt.state[(i+mt.m)%mt.n] ^ (mt.amult((mt.state[i] & mt.upperMask) | (mt.state[(i+1)%mt.n] & mt.lowerMask)))
 	}
 	mt.index = 0
 }
 
-func (mt *MT19937) AMult(x uint64) uint64 {
+func (mt *MT19937) amult(x uint64) uint64 {
 	if (x & 0x1) == 0x0 {
 		return x >> 1
 	} else {
