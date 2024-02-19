@@ -29,26 +29,55 @@ func untemper(input uint64) uint64 {
   y1 |= (input & mask1) ^ (y1 >> l)
 
   // (2) y1 = y2 ^ ((y2 << t) & c)
-  y2 := unwindshiftleft(y1, t, c)
+  y2 := unwindShiftLeft2(y1, t, c)
 	// (3) y2 = y3 ^ ((y3 << mt.s) & mt.b)
   //y3 := unwindshiftleft(y2, s, b)
   y3 := uint64(0)
   mask2 := uint64(1 << s) - 1
-  //fmt.Printf("%064b\n", mask2)
   mask2 |= (^b)
-  //fmt.Printf("%064b\n", mask2)
-  y3 |= (y2 & mask2) ^ 0x0
-  //fmt.Printf("%064b\n", y3)
+  y3 |= mask2 & (y2 ^ 0x0)
   // TODO: problem seems to be consistently with treating
   // the bits of the RH operand that were not zero
   // for RHS below, the only bits of y3 that are correct
   // are the oes that are zero?
-  fmt.Printf("%064b\n%064b\n",mask2,y3)
-  y3 |= (y2 & ^mask2) ^ ((y3 << s) & b)
-  fmt.Printf("%064b\n", y3)
-  fmt.Printf("%d\n", s)
+  mask3 := (^mask2 & ((mask2 << s) & b))
+  y3 |= mask3 & (y2 ^ ((y3 << s) & b))
+  know := mask2 | mask3
+  mask4 := (^know & ((know << s) & b))
+  y3 |= mask4 & (y2 ^ ((y3 << s) & b))
+  know |= mask4
+  mask5 := (^know & ((know << s) & b))
+  y3 |= mask5 & (y2 ^ ((y3 << s) & b))
+  know |= mask5
+  mask6 := (^know & ((know << s) & b))
+  y3 |= mask6 & (y2 ^ ((y3 << s) & b))
+  know |= mask6
+
+  y3 = unwindShiftLeft2(y2, s, b)
+  fmt.Printf("%d\n", y3)
 
   return 0
+}
+
+func unwindShiftLeftInner(input uint64, output uint64, nBits int, mask uint64, known uint64) uint64 {
+  next := (^known & ((known << nBits) & mask))
+  output |= next & (input ^ ((output << nBits) & mask))
+  known |= next
+  if known == 0xFFFFFFFFFFFFFFFF {
+    return output
+  } else {
+    return unwindShiftLeftInner(input, output, nBits, mask, known)
+  }
+}
+
+func unwindShiftLeft2(input uint64, nBits int, mask uint64) uint64 {
+  output := uint64(0)
+  mask2 := uint64(1 << nBits) - 1
+  mask2 |= (^mask)
+  output |= mask2 & (input ^ 0x0)
+  known := mask2
+
+  return unwindShiftLeftInner(input, output, nBits, mask, known)
 }
 
 func unwindshiftleft(input uint64, nBits int, mask uint64) uint64 {
