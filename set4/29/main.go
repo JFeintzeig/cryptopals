@@ -1,30 +1,33 @@
 package main
 
 import (
-  "fmt"
+	"crypto/sha1"
+	"fmt"
+	"math/rand"
+	"reflect"
 
-	sha1 "jfeintzeig/cryptopals/lib/sha1"
-  cryptopals "jfeintzeig/cryptopals/lib"
+	cryptopals "jfeintzeig/cryptopals/lib"
+	mysha1 "jfeintzeig/cryptopals/lib/sha1"
 )
 
-var key []byte
+var secretKey []byte
+var secretKeyLength int
 
 func init() {
-  //key = cryptopals.RandomAESKey()
-  key = cryptopals.MakeSingleByteSlice(0x61, 16)
+  secretKeyLength = rand.Intn(20)
+  secretKey = cryptopals.GenerateRandomBytes(secretKeyLength)
 }
 
 func authenticate(message []byte) []byte {
-  input := append(key, message...)
+  input := append(secretKey, message...)
   hasher := sha1.New()
   hasher.Write(input)
   output := hasher.Sum(nil)
-  hasher.GetRegisters()
   return output
 }
 
-func CalcPadding(message []byte) []byte {
-  ml := uint64(len(message)*8)
+func CalcPadding(message []byte, keyLengthBytes int) []byte {
+  ml := uint64((len(message) + keyLengthBytes)*8)
   nZeros := 512 - (ml % 512) - 64 - 8 // subtract 8 b/c of the 0x80 byte
   padding := make([]byte, 0)
   padding = append(padding, 0x80) // a 1 bit followed by 7 zeros
@@ -50,39 +53,41 @@ func MacToRegisters(input []byte) []uint32 {
   return output
 }
 
-func ForgeMessage(original []byte, originalMac []byte, payload []byte) ([]byte, []byte) {
-  padding := CalcPadding(original)
+func ForgeMessage(original []byte, originalMac []byte, keyLengthBytes int, payload []byte) ([]byte, []byte) {
+  padding := CalcPadding(original, keyLengthBytes)
 
   newMessage := append(original, padding...)
   newMessage = append(newMessage, payload...)
 
-  sha := sha1.New()
+  sha := mysha1.New()
   sha.SetRegisters([5]uint32(MacToRegisters(originalMac)))
   sha.Write(payload)
-  sha.GetRegisters()
+  extraLen := len(newMessage) - len(payload) + keyLengthBytes
 
-  return sha.Sum(nil), newMessage
+  output := sha.CheckSumWithExtraLength(extraLen)
+  return output[:], newMessage
 }
 
 func main() {
   fmt.Printf("Challenge 29\n")
-  //testInput := []byte("hello hello")
-  //hasher := sha1.New()
-  //hasher.Write(testInput)
-  //output := hasher.Sum(nil)
-  //fmt.Printf("Demonstrating we can split a SHA1 into registers:\n")
-  //fmt.Printf("%x\n", output)
-  //fmt.Printf("%x\n", MacToRegisters(output))
 
   original := []byte("comment1=cooking%20MCs;userdata=foo;comment2=%20like%20a%20pound%20of%20bacon")
   originalMac := authenticate(original)
-  fmt.Printf("Original Length: %d\n", len(original))
-  fmt.Printf("Origin Mac: %x\n", originalMac)
 
   payload := []byte(";admin=true")
-  forgedMac, message := ForgeMessage(original, originalMac, payload)
-  realMac := authenticate(message)
-  fmt.Printf("  Real Mac: %x\n", realMac)
-  fmt.Printf("Forged Mac: %x\n", forgedMac)
-  //fmt.Printf("Forged Message: %x\n%s\n", message, message)
+
+  for keyLength := 0; keyLength < 50; keyLength++ {
+    forgedMac, message := ForgeMessage(original, originalMac, keyLength, payload)
+    realMac := authenticate(message)
+    if reflect.DeepEqual(realMac, forgedMac) {
+      if keyLength != secretKeyLength {
+        panic("problem: reconstructed key length does not match truth")
+      }
+      fmt.Printf("Found the key length: %d\n", keyLength)
+      fmt.Printf("  Real Mac: %x\n", realMac)
+      fmt.Printf("Forged Mac: %x\n", forgedMac)
+      fmt.Printf("Check this against actual message:%x\n", append(secretKey, message...))
+      break
+    }
+  }
 }
