@@ -9,14 +9,15 @@
 package sha1
 
 import (
-	"crypto"
+  "fmt"
+	//"crypto"
 	"encoding/binary"
 	"errors"
-	"hash"
+	//"hash"
 )
 
 func init() {
-	crypto.RegisterHash(crypto.SHA1, New)
+	//crypto.RegisterHash(crypto.SHA1, New)
 }
 
 // The size of a SHA-1 checksum in bytes.
@@ -110,7 +111,7 @@ func (d *digest) Reset() {
 // New returns a new hash.Hash computing the SHA1 checksum. The Hash also
 // implements [encoding.BinaryMarshaler] and [encoding.BinaryUnmarshaler] to
 // marshal and unmarshal the internal state of the hash.
-func New() hash.Hash {
+func New() *digest {
 	d := new(digest)
 	d.Reset()
 	return d
@@ -119,6 +120,14 @@ func New() hash.Hash {
 func (d *digest) Size() int { return Size }
 
 func (d *digest) BlockSize() int { return BlockSize }
+
+func (d *digest) SetRegisters(regs [5]uint32) {
+  d.h = regs
+}
+
+func (d *digest) GetRegisters() {
+  fmt.Printf("registers: %x\n", d.h)
+}
 
 func (d *digest) Write(p []byte) (nn int, err error) {
 	nn = len(p)
@@ -145,7 +154,8 @@ func (d *digest) Write(p []byte) (nn int, err error) {
 
 func (d *digest) Sum(in []byte) []byte {
 	// Make a copy of d so that caller can keep writing and summing.
-	d0 := *d
+	//d0 := *d
+  d0 := d
 	hash := d0.checkSum()
 	return append(in, hash[:]...)
 }
@@ -167,6 +177,7 @@ func (d *digest) checkSum() [Size]byte {
 	padlen := tmp[:t+8]
 	binary.BigEndian.PutUint64(padlen[t:], len)
 	d.Write(padlen)
+  //fmt.Printf("padding: %x\n", padlen)
 
 	if d.nx != 0 {
 		panic("d.nx != 0")
