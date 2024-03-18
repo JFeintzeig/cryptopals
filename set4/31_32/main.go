@@ -114,7 +114,10 @@ func CrackHard(baseURL string, endpoint string, testFile string, sleepms int, tr
     signature[i] = byte(maxKey)
     if signature[i] != trueSignature[i] {
       fmt.Printf("problem:\n")
-      fmt.Printf("durations: %v\n", durations)
+      fmt.Printf("durations:\n")
+      for k, v := range durations {
+        fmt.Printf("%d // %x: %3.2f\n", k, k, v*1000)
+      }
     }
   }
 
@@ -129,8 +132,28 @@ func main() {
   testSignature, _ := hex.DecodeString("de7c9b85b8b78aa6bc8a7a36f70a90701c9db4d9")
 
   fmt.Printf("True Signature: %v\n", testSignature)
+  fmt.Printf("True Signature: %x\n", testSignature)
   rc, dt, _ := MakeRequest(baseURL, endpoint, testFile, testSignature, 50)
   fmt.Printf("RC: %d %v\n", rc, dt)
+
+  crackEasy := false
+  if crackEasy {
+    fmt.Printf("\n\nStarting CrackEasy(), 50ms sleep\n\n")
+    start := time.Now()
+    signature, err := CrackEasy(baseURL, endpoint, testFile)
+    d := time.Now().Sub(start)
+    fmt.Printf("%v to run CrackEasy()\n", d)
+
+    if err != nil {
+      fmt.Print(err)
+    }
+
+    if !reflect.DeepEqual(signature, testSignature) {
+      fmt.Printf("no match found, cracked signature: %x\n   real signature: %x\n", signature, testSignature)
+    } else {
+      fmt.Printf("SUCCESS!\ncracked signature: %x\n   real signature: %x\n", signature, testSignature)
+    }
+  }
 
   sleepms := 5
   fmt.Printf("\n\nStarting CrackHard(), %d ms sleep\n\n", sleepms)
@@ -149,19 +172,4 @@ func main() {
     fmt.Printf("SUCCESS!\ncracked signature: %x\n   real signature: %x\n", signatureH, testSignature)
   }
 
-  fmt.Printf("\n\nStarting CrackEasy(), 50ms sleep\n\n")
-  start := time.Now()
-  signature, err := CrackEasy(baseURL, endpoint, testFile)
-  d := time.Now().Sub(start)
-  fmt.Printf("%v to run CrackEasy()\n", d)
-
-  if err != nil {
-    fmt.Print(err)
-  }
-
-  if !reflect.DeepEqual(signature, testSignature) {
-    fmt.Printf("no match found, cracked signature: %x\n   real signature: %x\n", signature, testSignature)
-  } else {
-    fmt.Printf("SUCCESS!\ncracked signature: %x\n   real signature: %x\n", signature, testSignature)
-  }
 }
