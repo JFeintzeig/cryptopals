@@ -5,10 +5,11 @@ import (
 	"errors"
 	"fmt"
 	cryptopals "jfeintzeig/cryptopals/lib"
-  "math"
+	"math"
 	"net/http"
 	"net/url"
 	"reflect"
+	"sort"
 	"time"
 )
 
@@ -22,6 +23,10 @@ func MakeRequest(baseURL string, endpoint string, file string, signature []byte,
   // Make the GET request
   start := time.Now()
   resp, err := http.Get(fullURL)
+  if err != nil {
+    panic(err)
+  }
+  defer resp.Body.Close()
   duration := time.Now().Sub(start)
   if err != nil {
       fmt.Println("This Error:", err, resp)
@@ -64,60 +69,71 @@ func CrackEasy(baseURL string, endpoint string, testFile string) ([]byte, error)
   return signature, errors.New("failed to find signature")
 }
 
+func TestByte(baseURL string, endpoint string, testFile string, signature []byte, sleepms int, nsamples int) float64 {
+  vals := make([]float64, 0)
+  for i := 0; i < nsamples; i++ {
+    _, d, _ := MakeRequest(baseURL, endpoint, testFile, signature, sleepms)
+    vals = append(vals, d.Seconds())
+  }
+
+  sort.Float64s(vals)
+  avg := cryptopals.Average(vals[:nsamples-5])
+  //fmt.Printf("%x: %v elapsed time, avg: %3.3f\n", signature[:5], ela, avg*1000)
+  return avg
+}
+
 func CrackHard(baseURL string, endpoint string, testFile string, sleepms int, trueSignature []byte) ([]byte, error) {
   signature := cryptopals.MakeSingleByteSlice(0x00, 20)
-  nsamples := 11
+  nsamples := 10
 
   for i := range signature {
     durations := make(map[int]float64)
-    for j := 0; j < 256; j++ {
-      signature[i] = byte(j)
-      rc, d1, _ := MakeRequest(baseURL, endpoint, testFile, signature, sleepms)
-      if rc == 200 {
-        fmt.Printf("Got a 200!\n")
-        fmt.Printf("Signature for %s:\n%x\n", testFile, signature)
-        return signature, nil
-      } else {
-        maxD := d1.Seconds()
-        meanD := d1.Seconds()
-        for i := 1; i < nsamples; i++ {
-          _, dur, _ := MakeRequest(baseURL, endpoint, testFile, signature, sleepms)
-          meanD += dur.Seconds()
-          if dur.Seconds() > maxD {
-            maxD = dur.Seconds()
-          }
+    prev := -1
+    iteration := 0
+    for {
+      for j := 0; j < 256; j++ {
+        signature[i] = byte(j)
+        rc, _, _ := MakeRequest(baseURL, endpoint, testFile, signature, sleepms)
+        if rc == 200 {
+          fmt.Printf("Got a 200!\n")
+          fmt.Printf("Signature for %s:\n%x\n", testFile, signature)
+          return signature, nil
         }
 
-        durations[j] = (meanD - maxD) / float64(nsamples-1)
+        durations[j] = TestByte(baseURL, endpoint, testFile, signature, sleepms, nsamples)
       }
+
+      maxDuration := 0.0
+      meanDuration := 0.0
+      meanSquared := 0.0
+      maxKey := 256
+      for k, v := range durations {
+        meanDuration += v
+        meanSquared += v*v
+        if v > maxDuration {
+          maxDuration = v
+          maxKey = k
+        }
+      }
+
+      meanDuration = (meanDuration - maxDuration) / float64(len(durations) - 1)
+      meanSquared = (meanSquared - maxDuration*maxDuration) / float64(len(durations) - 1)
+      stdDev := math.Sqrt(meanSquared - meanDuration*meanDuration)
+
+      fmt.Printf("Min Key %d iteration %d with duration %3.2f vs. mean %3.2f +/- %3.2f\n", maxKey, iteration, maxDuration*1000, meanDuration*1000, stdDev*1000)
+
+      if prev == maxKey {
+        fmt.Printf("Next byte!\n")
+        break
+      }
+      prev = maxKey
+      iteration += 1
     }
 
-    maxDuration := 0.0
-    meanDuration := 0.0
-    meanSquared := 0.0
-    maxKey := 256
-    for k, v := range durations {
-      meanDuration += v
-      meanSquared += v*v
-      if v > maxDuration {
-        maxDuration = v
-        maxKey = k
-      }
-    }
-
-    meanDuration = (meanDuration - maxDuration) / float64(len(durations) - 1)
-    meanSquared = (meanSquared - maxDuration*maxDuration) / float64(len(durations) - 1)
-    stdDev := math.Sqrt(meanSquared - meanDuration*meanDuration)
-
-    fmt.Printf("Min Key %d with duration %3.2f vs. mean %3.2f +/- %3.2f\n", maxKey, maxDuration*1000, meanDuration*1000, stdDev*1000)
-
-    signature[i] = byte(maxKey)
+    signature[i] = byte(prev)
     if signature[i] != trueSignature[i] {
       fmt.Printf("problem:\n")
-      fmt.Printf("durations:\n")
-      for k, v := range durations {
-        fmt.Printf("%d // %x: %3.2f\n", k, k, v*1000)
-      }
+      fmt.Printf("durations: %v", durations)
     }
   }
 

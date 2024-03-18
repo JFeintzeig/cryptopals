@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"reflect"
 	"time"
-  "strconv"
+  //"strconv"
 )
 
 type HmacSha1 struct {
@@ -52,15 +52,12 @@ func NewHmacSha1(key []byte) *HmacSha1 {
   return &hmac
 }
 
-func InsecureCompare(b1 []byte, b2[]byte, sleep int) bool {
-  if len(b1) != len(b2) {
-    return false
-  }
+func InsecureCompare(b1 []byte, b2[]byte) bool {
   for i := range b1 {
     if b1[i] != b2[i] {
       return false
     }
-    time.Sleep(time.Duration(sleep) * time.Millisecond)
+    time.Sleep(time.Duration(5) * time.Millisecond)
   }
   return true
 }
@@ -69,13 +66,13 @@ func endpoint(w http.ResponseWriter, r *http.Request, hmac *HmacSha1) {
   params := r.URL.Query()
   file := params.Get("file")
   signature, _ := hex.DecodeString(params.Get("signature"))
-  sleep, err := strconv.Atoi(params.Get("sleepms"))
-  if err != nil {
-    panic(err)
-  }
+ // _, err := strconv.Atoi(params.Get("sleepms"))
+ // if err != nil {
+ //   panic(err)
+ // }
 
   trueSignature := hmac.MakeHmac([]byte(file))
-  matches := InsecureCompare([]byte(signature), []byte(trueSignature), sleep)
+  matches := InsecureCompare([]byte(signature), []byte(trueSignature))
 
   if !matches {
     w.WriteHeader(http.StatusInternalServerError)
