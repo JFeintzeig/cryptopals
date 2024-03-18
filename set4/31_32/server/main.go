@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"reflect"
 	"time"
-  //"strconv"
+  "strconv"
 )
 
 type HmacSha1 struct {
@@ -52,12 +52,12 @@ func NewHmacSha1(key []byte) *HmacSha1 {
   return &hmac
 }
 
-func InsecureCompare(b1 []byte, b2[]byte) bool {
+func InsecureCompare(b1 []byte, b2[]byte, sleep int) bool {
   for i := range b1 {
     if b1[i] != b2[i] {
       return false
     }
-    time.Sleep(time.Duration(5) * time.Millisecond)
+    time.Sleep(time.Duration(sleep) * time.Microsecond)
   }
   return true
 }
@@ -66,13 +66,13 @@ func endpoint(w http.ResponseWriter, r *http.Request, hmac *HmacSha1) {
   params := r.URL.Query()
   file := params.Get("file")
   signature, _ := hex.DecodeString(params.Get("signature"))
- // _, err := strconv.Atoi(params.Get("sleepms"))
- // if err != nil {
- //   panic(err)
- // }
+  sleep, err := strconv.Atoi(params.Get("sleep"))
+  if err != nil {
+    panic(err)
+  }
 
   trueSignature := hmac.MakeHmac([]byte(file))
-  matches := InsecureCompare([]byte(signature), []byte(trueSignature))
+  matches := InsecureCompare([]byte(signature), []byte(trueSignature), sleep)
 
   if !matches {
     w.WriteHeader(http.StatusInternalServerError)
@@ -81,7 +81,6 @@ func endpoint(w http.ResponseWriter, r *http.Request, hmac *HmacSha1) {
 }
 
 func main() {
-  //key := cryptopals.RandomAESKey()
   key := []byte("key")
   hmac := NewHmacSha1(key)
   testHmac := hmac.MakeHmac([]byte("The quick brown fox jumps over the lazy dog"))
