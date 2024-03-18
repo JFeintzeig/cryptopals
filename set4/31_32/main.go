@@ -13,11 +13,11 @@ import (
 	"time"
 )
 
-func MakeRequest(baseURL string, endpoint string, file string, signature []byte, sleepms int) (int, time.Duration, error) {
+func MakeRequest(baseURL string, endpoint string, file string, signature []byte, sleep int) (int, time.Duration, error) {
   queryParams := url.Values{}
   queryParams.Set("file", file)
   queryParams.Set("signature", hex.EncodeToString(signature))
-  queryParams.Set("sleepms", fmt.Sprintf("%d",sleepms))
+  queryParams.Set("sleep", fmt.Sprintf("%d",sleep))
   fullURL := fmt.Sprintf("%s%s?%s", baseURL, endpoint, queryParams.Encode())
 
   // Make the GET request
@@ -37,21 +37,21 @@ func MakeRequest(baseURL string, endpoint string, file string, signature []byte,
 }
 
 func CrackEasy(baseURL string, endpoint string, testFile string) ([]byte, error) {
-  sleepms := 50
+  sleep := 50000
   signature := cryptopals.MakeSingleByteSlice(0x00, 20)
 
   for i := range signature {
     found := false
     for j := 0; j < 256; j++ {
       signature[i] = byte(j)
-      rc, d, _ := MakeRequest(baseURL, endpoint, testFile, signature, sleepms)
+      rc, d, _ := MakeRequest(baseURL, endpoint, testFile, signature, sleep)
 
       if rc == 200 {
         fmt.Printf("Got a 200!\n")
         fmt.Printf("Signature for %s:\n%x\n", testFile, signature)
         return signature, nil
       } else {
-        if d > time.Duration(sleepms*(i+1)) * time.Millisecond {
+        if d > time.Duration(sleep*(i+1)) * time.Microsecond {
           // this byte matches!
           fmt.Printf("found byte %d: value %x duration %v\n", i, j, d)
           found = true
@@ -69,10 +69,10 @@ func CrackEasy(baseURL string, endpoint string, testFile string) ([]byte, error)
   return signature, errors.New("failed to find signature")
 }
 
-func TestByte(baseURL string, endpoint string, testFile string, signature []byte, sleepms int, nsamples int) float64 {
+func TestByte(baseURL string, endpoint string, testFile string, signature []byte, sleep int, nsamples int) float64 {
   vals := make([]float64, 0)
   for i := 0; i < nsamples; i++ {
-    _, d, _ := MakeRequest(baseURL, endpoint, testFile, signature, sleepms)
+    _, d, _ := MakeRequest(baseURL, endpoint, testFile, signature, sleep)
     vals = append(vals, d.Seconds())
   }
 
@@ -82,7 +82,7 @@ func TestByte(baseURL string, endpoint string, testFile string, signature []byte
   return avg
 }
 
-func CrackHard(baseURL string, endpoint string, testFile string, sleepms int, trueSignature []byte) ([]byte, error) {
+func CrackHard(baseURL string, endpoint string, testFile string, sleep int) ([]byte, error) {
   signature := cryptopals.MakeSingleByteSlice(0x00, 20)
   nsamples := 10
 
@@ -90,17 +90,18 @@ func CrackHard(baseURL string, endpoint string, testFile string, sleepms int, tr
     durations := make(map[int]float64)
     prev := -1
     iteration := 0
+    tabulate := make(map[int]int)
     for {
       for j := 0; j < 256; j++ {
         signature[i] = byte(j)
-        rc, _, _ := MakeRequest(baseURL, endpoint, testFile, signature, sleepms)
+        rc, _, _ := MakeRequest(baseURL, endpoint, testFile, signature, sleep)
         if rc == 200 {
           fmt.Printf("Got a 200!\n")
           fmt.Printf("Signature for %s:\n%x\n", testFile, signature)
           return signature, nil
         }
 
-        durations[j] = TestByte(baseURL, endpoint, testFile, signature, sleepms, nsamples)
+        durations[j] = TestByte(baseURL, endpoint, testFile, signature, sleep, nsamples)
       }
 
       maxDuration := 0.0
@@ -126,15 +127,26 @@ func CrackHard(baseURL string, endpoint string, testFile string, sleepms int, tr
         fmt.Printf("Next byte!\n")
         break
       }
+
       prev = maxKey
+
+      if _, ok := tabulate[maxKey]; ok {
+      tabulate[maxKey] += 1
+      } else {
+        tabulate[maxKey] = 1
+      }
+
+      for k, v := range tabulate {
+        if v > 2 {
+          prev = k
+          fmt.Printf("%d has been found 3x! Next byte!\n", k)
+          break
+        }
+      }
       iteration += 1
     }
 
     signature[i] = byte(prev)
-    if signature[i] != trueSignature[i] {
-      fmt.Printf("problem:\n")
-      fmt.Printf("durations: %v", durations)
-    }
   }
 
   return signature, errors.New("failed to find signature")
@@ -171,10 +183,10 @@ func main() {
     }
   }
 
-  sleepms := 5
-  fmt.Printf("\n\nStarting CrackHard(), %d ms sleep\n\n", sleepms)
+  sleep := 500 // usec
+  fmt.Printf("\n\nStarting CrackHard(), %d us sleep\n\n", sleep)
   startH := time.Now()
-  signatureH, err := CrackHard(baseURL, endpoint, testFile, sleepms, testSignature)
+  signatureH, err := CrackHard(baseURL, endpoint, testFile, sleep)
   dH := time.Now().Sub(startH)
   fmt.Printf("%v to run CrackHard()\n", dH)
 
