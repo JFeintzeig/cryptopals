@@ -137,9 +137,9 @@ func CrackHard(baseURL string, endpoint string, testFile string, sleep int) ([]b
       }
 
       for k, v := range tabulate {
-        if v > 2 {
+        if v > 3 {
           prev = k
-          fmt.Printf("%d has been found 3x! Next byte!\n", k)
+          fmt.Printf("%d has been found 4x! Next byte!\n", k)
           break
         }
       }
