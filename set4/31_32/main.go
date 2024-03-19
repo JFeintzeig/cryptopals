@@ -21,32 +21,35 @@ func MakeRequest(baseURL string, endpoint string, file string, signature []byte,
   fullURL := fmt.Sprintf("%s%s?%s", baseURL, endpoint, queryParams.Encode())
 
   // Make the GET request
-  retries := 3
+  retries := 10
   var err error
   var resp *http.Response
   var start time.Time
+  var duration time.Duration
 
   for retries > 0 {
     start = time.Now()
     resp, err = http.Get(fullURL)
+    duration = time.Now().Sub(start)
     if err != nil {
       retries -= 1
+      time.Sleep(50 * time.Millisecond)
     } else {
       break
     }
   }
 
   if err != nil {
-    panic("problem w request even w/3 retries")
+    panic(err)
   }
 
   defer resp.Body.Close()
-  duration := time.Now().Sub(start)
   if err != nil {
       fmt.Println("This Error:", err, resp)
       return 0, time.Duration(0), errors.New("problem")
   }
 
+  time.Sleep(500 * time.Microsecond)
   return resp.StatusCode, duration, nil
 }
 
@@ -91,7 +94,8 @@ func TestByte(baseURL string, endpoint string, testFile string, signature []byte
   }
 
   sort.Float64s(vals)
-  avg := cryptopals.Average(vals[:nsamples-5])
+  //avg := cryptopals.Average(vals[:nsamples-5])
+  avg := cryptopals.Min(vals)
   //fmt.Printf("%x: %v elapsed time, avg: %3.3f\n", signature[:5], ela, avg*1000)
   return avg
 }
@@ -202,7 +206,7 @@ func main() {
     }
   }
 
-  sleep := 250 // usec
+  sleep := 150 // usec
   fmt.Printf("\n\nStarting CrackHard(), %d us sleep\n\n", sleep)
   startH := time.Now()
   signatureH, err := CrackHard(baseURL, endpoint, testFile, sleep)
