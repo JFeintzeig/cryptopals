@@ -21,11 +21,25 @@ func MakeRequest(baseURL string, endpoint string, file string, signature []byte,
   fullURL := fmt.Sprintf("%s%s?%s", baseURL, endpoint, queryParams.Encode())
 
   // Make the GET request
-  start := time.Now()
-  resp, err := http.Get(fullURL)
-  if err != nil {
-    panic(err)
+  retries := 3
+  var err error
+  var resp *http.Response
+  var start time.Time
+
+  for retries > 0 {
+    start = time.Now()
+    resp, err = http.Get(fullURL)
+    if err != nil {
+      retries -= 1
+    } else {
+      break
+    }
   }
+
+  if err != nil {
+    panic("problem w request even w/3 retries")
+  }
+
   defer resp.Body.Close()
   duration := time.Now().Sub(start)
   if err != nil {
@@ -91,6 +105,7 @@ func CrackHard(baseURL string, endpoint string, testFile string, sleep int) ([]b
     prev := -1
     iteration := 0
     tabulate := make(map[int]int)
+    Outer:
     for {
       for j := 0; j < 256; j++ {
         signature[i] = byte(j)
@@ -123,6 +138,10 @@ func CrackHard(baseURL string, endpoint string, testFile string, sleep int) ([]b
 
       fmt.Printf("Min Key %d iteration %d with duration %3.2f vs. mean %3.2f +/- %3.2f\n", maxKey, iteration, maxDuration*1000, meanDuration*1000, stdDev*1000)
 
+      // It does at least 2 iterations of the full 256x brute force
+      // To move onto the next byte, it either has to:
+      // (a) have consecutive runs that return the same byte
+      // (b) accumulate enough runs that a byte wins 4x
       if prev == maxKey {
         fmt.Printf("Next byte!\n")
         break
@@ -140,7 +159,7 @@ func CrackHard(baseURL string, endpoint string, testFile string, sleep int) ([]b
         if v > 3 {
           prev = k
           fmt.Printf("%d has been found 4x! Next byte!\n", k)
-          break
+          break Outer
         }
       }
       iteration += 1
@@ -183,7 +202,7 @@ func main() {
     }
   }
 
-  sleep := 500 // usec
+  sleep := 250 // usec
   fmt.Printf("\n\nStarting CrackHard(), %d us sleep\n\n", sleep)
   startH := time.Now()
   signatureH, err := CrackHard(baseURL, endpoint, testFile, sleep)
